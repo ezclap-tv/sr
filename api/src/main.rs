@@ -1,4 +1,5 @@
-use actix_web::{get, post, App, HttpResponse, HttpServer, Responder};
+use actix_cors::Cors;
+use actix_web::{get, middleware::Logger, post, App, HttpResponse, HttpServer, Responder};
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -14,8 +15,14 @@ async fn echo(body: String) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    HttpServer::new(|| App::new().service(hello).service(echo))
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await
+    HttpServer::new(|| {
+        App::new()
+            .wrap(Cors::permissive())
+            .wrap(Logger::default())
+            .service(hello)
+            .service(echo)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }

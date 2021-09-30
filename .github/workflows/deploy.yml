@@ -10,12 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+        # only applies to `run`
         working-directory: ./ui
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
           cache: "yarn"
+          cache-dependency-path: ui/yarn.lock
           node-version: "16.x"
           registry-url: "https://registry.npmjs.org"
       - run: yarn
@@ -25,7 +27,7 @@ jobs:
         with:
           single-commit: true
           branch: gh-pages
-          folder: dist
+          folder: ./ui/dist
   deploy-api:
     name: Deploy API
     runs-on: ubuntu-latest
@@ -35,23 +37,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache Rust dependencies
-        uses: actions/cache@v1.0.1
+        uses: actions/cache@v2
         with:
-          path: target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            api/target
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('api/**/Cargo.lock') }}
       - name: Get Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
+          default: true
+      - run: cargo test
+      - name: Deploy to Heroku
+        run: git subtree push --prefix api https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master

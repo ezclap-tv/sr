@@ -15,6 +15,16 @@ async fn echo(body: String) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
+    let address = if cfg!(debug_assertions) {
+        ("127.0.0.1", 8080)
+    } else {
+        let port = std::env::var("PORT")
+            .expect("PORT must be set")
+            .parse()
+            .expect("PORT must be a number");
+        ("0.0.0.0", port)
+    };
+
     HttpServer::new(|| {
         App::new()
             .wrap(Cors::permissive())
@@ -22,7 +32,8 @@ async fn main() -> std::io::Result<()> {
             .service(hello)
             .service(echo)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(address)
+    .expect(&format!("Failed to bind on {}:{}", address.0, address.1))
     .run()
     .await
 }

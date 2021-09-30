@@ -1,2 +1,3 @@
 max_width = 120
 wrap_comments = false
+newline_style = "Unix"

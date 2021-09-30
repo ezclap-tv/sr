@@ -50,4 +50,10 @@ jobs:
       - run: cargo test
         working-directory: ./api
       - name: Deploy to Heroku
-        run: git subtree push --prefix api https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master
+        working-directory: ./api
+        run: |
+          git init
+          git add .
+          git commit -am "deploy"
+          git push --force https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master
+          rm -rf .git

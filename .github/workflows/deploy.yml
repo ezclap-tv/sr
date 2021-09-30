@@ -40,7 +40,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             api/target
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('api/**/Cargo.lock') }}
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Get Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -50,7 +50,6 @@ jobs:
       - run: cargo test
         working-directory: ./api
       - name: Deploy to Heroku
-        working-directory: ./api
         run: |
           git subtree split --prefix api -b heroku-build
           git push -f https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master

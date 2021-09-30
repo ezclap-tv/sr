@@ -8,5 +8,7 @@ edition = "2018"
 [dependencies]
 tokio = "1"
 actix-web = "3"
+actix-cors = "0.5"
 log = "0.4.14"
 env_logger = "0.9.0"
+anyhow = "1.0.44"

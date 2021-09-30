@@ -31,9 +31,6 @@ jobs:
   deploy-api:
     name: Deploy API
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./api
     steps:
       - uses: actions/checkout@v2
       - name: Cache Rust dependencies
@@ -51,5 +48,6 @@ jobs:
           toolchain: nightly
           default: true
       - run: cargo test
+        working-directory: ./api
       - name: Deploy to Heroku
         run: git subtree push --prefix api https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master

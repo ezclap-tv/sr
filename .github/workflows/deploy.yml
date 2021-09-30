@@ -51,9 +51,4 @@ jobs:
         working-directory: ./api
       - name: Deploy to Heroku
         working-directory: ./api
-        run: |
-          git init
-          git add .
-          git commit -am "deploy"
-          git push --force https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git master
-          rm -rf .git
+        run: git push https://heroku:${{ secrets.HEROKU_API_KEY }}@git.heroku.com/${{ secrets.HEROKU_APP_NAME }}.git \`git subtree split --prefix api HEAD\`:master --force

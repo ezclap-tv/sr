@@ -12,7 +12,7 @@
     "strictPropertyInitialization": true,
     "strictNullChecks": true,
     "isolatedModules": true,
-    "types": ["svelte"]
+    "types": ["svelte", "youtube"]
   },
   "include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.js", "src/**/*.svelte"]
 }

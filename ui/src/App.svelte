@@ -1,28 +1,26 @@
 <script lang="ts">
   import Router from "svelte-spa-router";
-  import Header from "./Header.svelte";
+  import wrap from "svelte-spa-router/wrap";
   import Footer from "./Footer.svelte";
 
   import Home from "./views/Home.svelte";
 
   const routes = {
     "/": Home,
+    "/player/:room": wrap({
+      asyncComponent: () => import("./views/Player.svelte"),
+    }),
   };
 </script>
 
-<Header />
-<main class="ml-[15%] mr-[15%] box">
-  <Router {routes} />
-</main>
+<Router {routes} />
 <Footer />
 
 <style global>
   html,
   body,
   #app {
-    @apply h-full;
-    @apply bg-brand-dark;
-    @apply text-brand-lighter;
+    @apply h-full bg-brand-dark text-brand-lighter;
   }
 
   svg > path {

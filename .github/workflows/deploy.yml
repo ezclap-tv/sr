@@ -1,13 +1,15 @@
-name: Deploy
+name: Deployment
 on:
   push:
     branches:
       - main
 
 jobs:
-  deploy:
-    name: Deploy
+  deploy-ui:
+    name: Deploy UI
     runs-on: ubuntu-latest
+    defaults:
+      working-directory: ./ui
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
@@ -23,3 +25,32 @@ jobs:
           single-commit: true
           branch: gh-pages
           folder: dist
+  deploy-api:
+    name: Deploy API
+    runs-on: ubuntu-latest
+    defaults:
+      working-directory: ./api
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Rust dependencies
+        uses: actions/cache@v1.0.1
+        with:
+          path: target
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+      - name: Get Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - run:

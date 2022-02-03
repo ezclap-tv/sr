@@ -34,18 +34,18 @@ export class EventEmitter<
   WithValue = Remove<Events, void>,
   NoValue = Omit<Events, keyof WithValue>
 > {
-  #callbacks: { [P in keyof WithValue]?: (v: WithValue[P]) => void } & { [P in keyof NoValue]?: () => void } = {};
+  callbacks: { [P in keyof WithValue]?: (v: WithValue[P]) => void } & { [P in keyof NoValue]?: () => void } = {};
   emit<E extends keyof WithValue>(event: E, value: WithValue[E]): void;
   emit<E extends keyof NoValue>(event: E): void;
   emit(event: string, value?: any) {
-    const callbacks = this.#callbacks as any;
+    const callbacks = this.callbacks as any;
     if (value) callbacks[event]?.forEach((f: any) => f(value));
     else callbacks[event]?.forEach((f: any) => f());
   }
 
   on<E extends keyof WithValue>(event: E, callback: (value: WithValue[E]) => void, options?: { once?: boolean }): void;
   on<E extends keyof NoValue>(event: E, callback: () => void, options?: { once?: boolean }): void;
-  on(event: string, callback: any, options = { once: true }) {
+  on(event: string, callback: any, options = { once: false }) {
     if (options.once) {
       let orig = callback;
       const fn = () => {
@@ -54,7 +54,7 @@ export class EventEmitter<
       };
       callback = fn;
     }
-    const callbacks = this.#callbacks as any;
+    const callbacks = this.callbacks as any;
     const set = callbacks[event] ?? new Set();
     set.add(callback);
     callbacks[event] = set;
@@ -63,7 +63,7 @@ export class EventEmitter<
   off<E extends keyof WithValue>(event: E, callback: (value: WithValue[E]) => void): void;
   off<E extends keyof NoValue>(event: E, callback: () => void): void;
   off(event: string, callback: any) {
-    const callbacks = this.#callbacks as any;
+    const callbacks = this.callbacks as any;
     callbacks[event]?.delete(callback);
   }
 }

@@ -1,0 +1,28 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# file:///C:/Users/Honza/Downloads/zero2prod_with_cover_20210930.pdf
+# https://github.com/ezclap-tv/shit-chat-says/blob/main/scs-user-api/Cargo.toml
+
+[dependencies]
+
+# actix
+actix = "=0.12"
+actix-http = "=3.0.0-rc.1"
+actix-web = "=4.0.0-rc.2"
+actix-cors = "=0.6.0-beta.8"
+
+tokio = "1.16.1"
+reqwest = { version = "0.11.9", features = ["json"] }
+anyhow = "1.0.53"
+log = "0.4.14"
+env_logger = "0.9.0"
+serde_json = "1.0.78"
+serde = { version = "1.0.136", features = ["derive"] }
+
+[dev-dependencies]
+serde_urlencoded = "0.7.1"

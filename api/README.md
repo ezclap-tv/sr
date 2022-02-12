@@ -12,8 +12,7 @@ Shuffling works by retrieving the entire playlist at once, and randomly selectin
 
 ### GET /random
 
-  ?platform=PLATFORM - (required) Platform identifier, youtube/spotify/soundcloud/etc
-  &channel=CHANNEL   - (optional) Channel name of the chat from which songs can come
+  ?platform=PLATFORM - (optional) Platform identifier, youtube/spotify/soundcloud/etc
   &count=COUNT       - (optional) Number of random songs to return, default 1
 
 Obtain N=count random songs (any platform)

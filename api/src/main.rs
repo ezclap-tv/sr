@@ -7,5 +7,5 @@ async fn main() -> Result<()> {
   }
   env_logger::init();
 
-  api::run("127.0.0.1:8000".parse().unwrap()).await
+  Ok(api::run(std::net::TcpListener::bind("127.0.0.1:8000")?)?.await?)
 }

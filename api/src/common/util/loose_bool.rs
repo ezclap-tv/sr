@@ -4,15 +4,17 @@ fn parse_0_or_1<E>(v: &str) -> Result<bool, E>
 where
   E: serde::de::Error,
 {
-  v.parse::<u8>().map_err(serde::de::Error::custom).and_then(|v| {
-    if v == 0 {
-      Ok(false)
-    } else if v == 1 {
-      Ok(true)
-    } else {
-      Err(serde::de::Error::custom("must be 0 or 1"))
-    }
-  })
+  v.parse::<u8>()
+    .map_err(serde::de::Error::custom)
+    .and_then(|v| {
+      if v == 0 {
+        Ok(false)
+      } else if v == 1 {
+        Ok(true)
+      } else {
+        Err(serde::de::Error::custom("must be 0 or 1"))
+      }
+    })
 }
 
 fn parse_bool<E>(v: &str) -> Result<bool, E>

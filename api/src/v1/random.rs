@@ -1,10 +1,10 @@
-use actix_web::{self as web, web::Query, HttpResponse};
 use crate::common::platform;
+use actix_web::{self as web, web::Query, HttpResponse};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct RandomRequest {
-  #[serde(deserialize_with = "platform::known")]
-  pub platform: String,
+  #[serde(deserialize_with = "platform::known_opt")]
+  pub platform: Option<String>,
   pub channel: Option<String>,
   #[serde(default = "default_count")]
   pub count: u64,

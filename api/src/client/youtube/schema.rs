@@ -211,22 +211,16 @@ mod tests {
             id: "Ks-_Mh1QhMc".into(),
             snippet: VideoListItemSnippet {
               channel_id: "UCAuUUnT6oDeKwE6v1NGQxug".into(),
-              title: "Your body language may shape who you are | Amy Cuddy"
-                .into(),
-              published_at: DateTime::<Utc>::from(
-                DateTime::parse_from_rfc3339("2012-10-01T15:27:35Z").unwrap()
-              )
+              title: "Your body language may shape who you are | Amy Cuddy".into(),
+              published_at: DateTime::<Utc>::from(DateTime::parse_from_rfc3339("2012-10-01T15:27:35Z").unwrap())
             }
           },
           VideoListItem {
             id: "Ks-_Mh1QhMc".into(),
             snippet: VideoListItemSnippet {
               channel_id: "UCAuUUnT6oDeKwE6v1NGQxug".into(),
-              title: "Your body language may shape who you are | Amy Cuddy"
-                .into(),
-              published_at: DateTime::<Utc>::from(
-                DateTime::parse_from_rfc3339("2012-10-01T15:27:35Z").unwrap()
-              )
+              title: "Your body language may shape who you are | Amy Cuddy".into(),
+              published_at: DateTime::<Utc>::from(DateTime::parse_from_rfc3339("2012-10-01T15:27:35Z").unwrap())
             }
           }
         ],

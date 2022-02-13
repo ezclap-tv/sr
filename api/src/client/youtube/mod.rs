@@ -12,10 +12,7 @@ pub struct Client {
 }
 
 impl Client {
-  pub fn new(
-    base_url: impl Into<String>,
-    api_key: Secret<String>,
-  ) -> Arc<Client> {
+  pub fn new(base_url: impl Into<String>, api_key: Secret<String>) -> Arc<Client> {
     Arc::new(Self {
       inner: reqwest::Client::new(),
       base_url: base_url.into(),
@@ -33,10 +30,7 @@ pub struct Video {
 }
 
 impl Client {
-  pub async fn playlist_videos(
-    self: Arc<Self>,
-    playlist_id: &str,
-  ) -> reqwest::Result<Vec<Video>> {
+  pub async fn playlist_videos(self: Arc<Self>, playlist_id: &str) -> reqwest::Result<Vec<Video>> {
     let mut result = vec![];
     let mut page_token = Option::<String>::None;
     loop {
@@ -59,18 +53,13 @@ impl Client {
       let videos = self
         .inner
         .get(format!("{}/videos", self.base_url))
-        .query(&[
-          ("key", self.api_key.expose_secret().as_str()),
-          ("part", "snippet"),
-        ])
+        .query(&[("key", self.api_key.expose_secret().as_str()), ("part", "snippet")])
         .query_iter(
           "id",
           playlist_items
             .items
             .iter()
-            .filter(|item| {
-              item.status.privacy_status != schema::PrivacyStatus::Unspecified
-            })
+            .filter(|item| item.status.privacy_status != schema::PrivacyStatus::Unspecified)
             .map(|v| &v.content_details.video_id),
         )
         .send()
@@ -213,11 +202,7 @@ mod tests {
     Mock::given(path("/playlistItems"))
       .and(method("GET"))
       .respond_with(|r: &Request| {
-        let has_page_token = r
-          .url
-          .query()
-          .map(|q| q.contains("pageToken"))
-          .unwrap_or(false);
+        let has_page_token = r.url.query().map(|q| q.contains("pageToken")).unwrap_or(false);
         let id_start = if has_page_token { 25 } else { 0 };
         ResponseTemplate::new(200).set_body_json(schema::PlaylistItemList {
           items: (id_start..id_start + 25)
@@ -231,11 +216,7 @@ mod tests {
               },
             })
             .collect(),
-          next_page_token: if has_page_token {
-            None
-          } else {
-            Some("0".into())
-          },
+          next_page_token: if has_page_token { None } else { Some("0".into()) },
         })
       })
       .expect(2)

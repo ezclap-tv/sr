@@ -50,7 +50,7 @@ where
       INSERT INTO playlists_songs (playlist_id, song_id)
       SELECT * FROM new_playlist
       JOIN song_ids ON true
-    "#
+    "#,
   )
   .bind(&playlist.platform)
   .bind(&playlist.playlist_id)
@@ -64,12 +64,7 @@ where
 }
 
 // get playlist items (keyset pagination)
-pub async fn get_page<'db, E>(
-  db: E,
-  playlist_id: &str,
-  offset: i32,
-  limit: i32,
-) -> sqlx::Result<Vec<Song>>
+pub async fn get_page<'db, E>(db: E, playlist_id: &str, offset: i32, limit: i32) -> sqlx::Result<Vec<Song>>
 where
   E: sqlx::PgExecutor<'db> + 'db,
 {
@@ -105,8 +100,7 @@ mod tests {
 
   fn generate_song() -> SongData {
     SongData {
-      published_at: Utc::now()
-        - Duration::seconds(thread_rng().gen_range(0..1209600)),
+      published_at: Utc::now() - Duration::seconds(thread_rng().gen_range(0..1209600)),
       song_id: Uuid::new_v4().to_string(),
       platform: "test".into(),
       title: "song".into(),
@@ -119,10 +113,7 @@ mod tests {
     let conn = db::connect_from_env().await?;
     let mut tx = conn.begin().await?;
 
-    let songs = (0..500)
-      .into_iter()
-      .map(|_| generate_song())
-      .collect::<Vec<_>>();
+    let songs = (0..500).into_iter().map(|_| generate_song()).collect::<Vec<_>>();
 
     // pre-insert 250 of the 500 generated songs
     db::songs::create_bulk(&mut tx, songs[..250].to_vec()).await?;
@@ -141,18 +132,15 @@ mod tests {
 
     // playlist exists
     assert!(
-      sqlx::query_scalar::<_, bool>(
-        r#"SELECT true FROM playlists WHERE platform_playlist_id = $1"#,
-      )
-      .bind(&data.playlist_id)
-      .fetch_one(&mut tx)
-      .await?
+      sqlx::query_scalar::<_, bool>(r#"SELECT true FROM playlists WHERE platform_playlist_id = $1"#,)
+        .bind(&data.playlist_id)
+        .fetch_one(&mut tx)
+        .await?
     );
     // there are exactly 500 songs
-    let song_count =
-      sqlx::query_scalar::<_, i64>(r#"SELECT COUNT(*) FROM songs"#)
-        .fetch_one(&mut tx)
-        .await?;
+    let song_count = sqlx::query_scalar::<_, i64>(r#"SELECT COUNT(*) FROM songs"#)
+      .fetch_one(&mut tx)
+      .await?;
     assert_eq!(song_count, 500);
     // all the songs are part of the new playlist
     let playlist_song_count = sqlx::query_scalar::<_, i64>(
@@ -184,20 +172,19 @@ mod tests {
       .execute(&mut tx)
       .await?;
     // insert some songs
-    let songs = (0..100)
-      .into_iter()
-      .map(|_| generate_song())
-      .collect::<Vec<_>>();
+    let songs = (0..100).into_iter().map(|_| generate_song()).collect::<Vec<_>>();
     db::songs::create_bulk(&mut tx, songs.clone()).await?;
     // insert the playlist entries
-    sqlx::query("
+    sqlx::query(
+      "
       WITH
       playlist AS (SELECT playlist_id FROM playlists WHERE platform_playlist_id = 'test'),
       song_ids AS (SELECT song_id FROM songs)
       INSERT INTO playlists_songs (playlist_id, song_id)
       SELECT * FROM playlist
       JOIN song_ids ON true
-    ")
+    ",
+    )
     .execute(&mut tx)
     .await?;
 

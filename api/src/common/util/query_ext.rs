@@ -45,10 +45,7 @@ mod tests {
       .build()
       .unwrap();
 
-    assert_eq!(
-      request.url().as_str(),
-      "http://test.com/api?id=0&id=1&id=2&id=3"
-    );
+    assert_eq!(request.url().as_str(), "http://test.com/api?id=0&id=1&id=2&id=3");
   }
 
   #[test]

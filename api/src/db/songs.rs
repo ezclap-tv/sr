@@ -29,12 +29,7 @@ pub struct SongDataSoa {
 }
 
 impl SongData {
-  pub fn new(
-    platform: String,
-    song_id: String,
-    title: String,
-    published_at: DateTime<Utc>,
-  ) -> Self {
+  pub fn new(platform: String, song_id: String, title: String, published_at: DateTime<Utc>) -> Self {
     Self {
       published_at,
       song_id,
@@ -99,18 +94,18 @@ where
 {
   let songs = SongData::soa(data);
   sqlx::query(
-      r#"
+    r#"
       INSERT INTO songs (published_at, platform, platform_song_id, title)
         SELECT * FROM UNNEST($1::timestamptz[], $2::text[], $3::text[], $4::text[])
       ON CONFLICT DO NOTHING;
     "#,
-    )
-    .bind(&songs.published_at)
-    .bind(&songs.platform)
-    .bind(&songs.song_id)
-    .bind(&songs.title)
-    .execute(db)
-    .await?;
+  )
+  .bind(&songs.published_at)
+  .bind(&songs.platform)
+  .bind(&songs.song_id)
+  .bind(&songs.title)
+  .execute(db)
+  .await?;
   Ok(())
 }
 

@@ -1,31 +1,30 @@
 pub trait QueryExt {
-  fn query_iter<T>(self, iter: impl Iterator<Item = T>) -> Self
+  fn query_iter<T>(self, key: &str, value: impl Iterator<Item = T>) -> Self
   where
     T: serde::Serialize;
 
-  fn query_opt<T>(self, opt: Option<T>) -> Self
+  fn query_opt<T>(self, key: &str, value: Option<T>) -> Self
   where
     T: serde::Serialize;
 }
 
 impl QueryExt for reqwest::RequestBuilder {
-  fn query_iter<T>(self, iter: impl Iterator<Item = T>) -> Self
+  fn query_iter<T>(mut self, key: &str, value: impl Iterator<Item = T>) -> Self
   where
     T: serde::Serialize,
   {
-    let mut builder = self;
-    for item in iter {
-      builder = builder.query(&[item])
+    for item in value {
+      self = self.query(&[(key, item)])
     }
-    builder
+    self
   }
 
-  fn query_opt<T>(self, opt: Option<T>) -> Self
+  fn query_opt<T>(self, key: &str, value: Option<T>) -> Self
   where
     T: serde::Serialize,
   {
-    match opt {
-      Some(v) => self.query(&[v]),
+    match value {
+      Some(v) => self.query(&[(key, v)]),
       None => self,
     }
   }
@@ -42,7 +41,7 @@ mod tests {
 
     let request = Client::new()
       .get("http://test.com/api")
-      .query_iter(ids.iter().map(|id| ("id", *id)))
+      .query_iter("id", ids.iter())
       .build()
       .unwrap();
 
@@ -54,13 +53,13 @@ mod tests {
 
   #[test]
   fn add_to_query_using_option() {
-    let a = Some(("a", "a"));
-    let b = Option::<(&str, &str)>::None;
+    let a = Some("a");
+    let b = Option::<&str>::None;
 
     let request = Client::new()
       .get("http://test.com/api")
-      .query_opt(a)
-      .query_opt(b)
+      .query_opt("a", a)
+      .query_opt("b", b)
       .build()
       .unwrap();
 

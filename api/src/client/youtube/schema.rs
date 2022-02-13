@@ -1,23 +1,23 @@
 use super::*;
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PageInfo {
   #[serde(rename = "totalResults")]
   total_results: usize,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct VideoList {
   pub items: Vec<VideoListItem>,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct VideoListItem {
   pub id: String,
   pub snippet: VideoListItemSnippet,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct VideoListItemSnippet {
   #[serde(rename = "channelId")]
   pub channel_id: String,
@@ -26,35 +26,33 @@ pub struct VideoListItemSnippet {
   pub published_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PlaylistItemList {
   pub items: Vec<PlaylistItem>,
   #[serde(rename = "nextPageToken")]
   pub next_page_token: Option<String>,
-  #[serde(rename = "pageInfo")]
-  pub page_info: PageInfo,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PlaylistItem {
   #[serde(rename = "contentDetails")]
   pub content_details: PlaylistItemContentDetails,
   pub status: PlaylistItemStatus,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PlaylistItemContentDetails {
   #[serde(rename = "videoId")]
   pub video_id: String,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PlaylistItemStatus {
   #[serde(rename = "privacyStatus")]
   pub privacy_status: PrivacyStatus,
 }
 
-#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum PrivacyStatus {
   #[serde(rename = "public")]
   Public,
@@ -297,8 +295,7 @@ mod tests {
             }
           }
         ],
-        next_page_token: Some("EAAaBlBUOkNBSQ".into()),
-        page_info: PageInfo { total_results: 539 }
+        next_page_token: Some("EAAaBlBUOkNBSQ".into())
       }
     )
   }

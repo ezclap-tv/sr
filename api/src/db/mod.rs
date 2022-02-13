@@ -14,12 +14,10 @@ pub async fn connect(
   user: &str,
   password: &str,
 ) -> sqlx::Result<PgPool> {
-  Ok(
-    PgPool::connect(&format!(
-      "postgres://{host}:{port}/{name}?user={user}&password={password}"
-    ))
-    .await?,
-  )
+  PgPool::connect(&format!(
+    "postgres://{host}:{port}/{name}?user={user}&password={password}"
+  ))
+  .await
 }
 
 /// Connect to the database using environment variables.

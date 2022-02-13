@@ -54,7 +54,7 @@ if p.returncode != 0 or status != "true":
         stderr=DEVNULL,
         check=True)
       break
-    except:
+    except Exception:
       print("...")
       sleep(1)
 else:

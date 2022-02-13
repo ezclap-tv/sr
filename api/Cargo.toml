@@ -8,6 +8,9 @@ edition = "2021"
 # file:///C:/Users/Honza/Downloads/zero2prod_with_cover_20210930.pdf
 # https://github.com/ezclap-tv/shit-chat-says/blob/main/scs-user-api/Cargo.toml
 
+[features]
+test-database = []
+
 [dependencies]
 
 # actix
@@ -30,6 +33,8 @@ byteorder = "1.4.3"
 bytes = "1.1.0"
 rand = "0.8.4"
 uuid = { version = "0.8.2", features = ["v4"] }
+secrecy = { version = "0.8.0", features = ["serde"] }
 
 [dev-dependencies]
 serde_urlencoded = "0.7.1"
+wiremock = "0.5.10"

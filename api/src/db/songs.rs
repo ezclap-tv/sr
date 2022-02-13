@@ -3,10 +3,12 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, getset::Getters, sqlx::FromRow)]
 #[getset(get = "pub")]
 pub struct Song {
+  #[sqlx(rename = "song_id")]
   id: i32,
   added_at: DateTime<Utc>,
   published_at: DateTime<Utc>,
   platform: String,
+  #[sqlx(rename = "platform_song_id")]
   song_id: String,
   title: String,
 }
@@ -140,4 +142,9 @@ where
   .bind(&title)
   .fetch_one(db)
   .await
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
 }

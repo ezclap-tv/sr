@@ -1,15 +1,4 @@
 use super::songs::*;
-use chrono::{DateTime, Utc};
-
-#[derive(Debug, Clone, getset::Getters)]
-#[getset(get = "pub")]
-pub struct Playlist {
-  id: i32,
-  updated_at: DateTime<Utc>,
-  platform: String,
-  playlist_id: String,
-  songs: Vec<String>,
-}
 
 #[derive(Debug, Clone)]
 pub struct PlaylistData {
@@ -30,7 +19,8 @@ where
   // $4 = songs.platform
   // $5 = songs.platform_song_id
   // $6 = songs.title
-  sqlx::query(r#"
+  sqlx::query(
+    r#"
       WITH
       -- insert playlist, get its id
       new_playlist AS (
@@ -60,22 +50,23 @@ where
       INSERT INTO playlists_songs (playlist_id, song_id)
       SELECT * FROM new_playlist
       JOIN song_ids ON true
-    "#)
-    .bind(&playlist.platform)
-    .bind(&playlist.playlist_id)
-    .bind(&songs.published_at)
-    .bind(&songs.platform)
-    .bind(&songs.song_id)
-    .bind(&songs.title)
-    .execute(db)
-    .await?;
+    "#
+  )
+  .bind(&playlist.platform)
+  .bind(&playlist.playlist_id)
+  .bind(&songs.published_at)
+  .bind(&songs.platform)
+  .bind(&songs.song_id)
+  .bind(&songs.title)
+  .execute(db)
+  .await?;
   Ok(())
 }
 
 // get playlist items (keyset pagination)
 pub async fn get_page<'db, E>(
   db: E,
-  playlist_id: i32,
+  playlist_id: &str,
   offset: i32,
   limit: i32,
 ) -> sqlx::Result<Vec<Song>>
@@ -123,6 +114,7 @@ mod tests {
   }
 
   #[actix_rt::test]
+  #[cfg_attr(not(feature = "test-database"), ignore)]
   async fn insert_a_playlist() -> anyhow::Result<()> {
     let conn = db::connect_from_env().await?;
     let mut tx = conn.begin().await?;
@@ -132,7 +124,7 @@ mod tests {
       .map(|_| generate_song())
       .collect::<Vec<_>>();
 
-    // pre-insert some songs
+    // pre-insert 250 of the 500 generated songs
     db::songs::create_bulk(&mut tx, songs[..250].to_vec()).await?;
 
     // insert the playlist
@@ -162,7 +154,6 @@ mod tests {
         .fetch_one(&mut tx)
         .await?;
     assert_eq!(song_count, 500);
-    println!("third query");
     // all the songs are part of the new playlist
     let playlist_song_count = sqlx::query_scalar::<_, i64>(
       r#"
@@ -177,6 +168,42 @@ mod tests {
     .fetch_one(&mut tx)
     .await?;
     assert_eq!(song_count, playlist_song_count);
+
+    tx.rollback().await?;
+    Ok(())
+  }
+
+  #[actix_rt::test]
+  #[cfg_attr(not(feature = "test-database"), ignore)]
+  async fn paged_playlist() -> anyhow::Result<()> {
+    let conn = db::connect_from_env().await?;
+    let mut tx = conn.begin().await?;
+
+    // create a playlist
+    sqlx::query("INSERT INTO playlists (updated_at, platform, platform_playlist_id) VALUES (now(), 'youtube', 'test')")
+      .execute(&mut tx)
+      .await?;
+    // insert some songs
+    let songs = (0..100)
+      .into_iter()
+      .map(|_| generate_song())
+      .collect::<Vec<_>>();
+    db::songs::create_bulk(&mut tx, songs.clone()).await?;
+    // insert the playlist entries
+    sqlx::query("
+      WITH
+      playlist AS (SELECT playlist_id FROM playlists WHERE platform_playlist_id = 'test'),
+      song_ids AS (SELECT song_id FROM songs)
+      INSERT INTO playlists_songs (playlist_id, song_id)
+      SELECT * FROM playlist
+      JOIN song_ids ON true
+    ")
+    .execute(&mut tx)
+    .await?;
+
+    assert_eq!(get_page(&mut tx, "test", 0, 50).await?.len(), 50);
+    assert_eq!(get_page(&mut tx, "test", 50, 50).await?.len(), 50);
+    assert_eq!(get_page(&mut tx, "test", 100, 50).await?.len(), 0);
 
     tx.rollback().await?;
     Ok(())

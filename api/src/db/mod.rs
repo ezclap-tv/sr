@@ -1,14 +1,18 @@
 pub mod playlists;
 pub mod songs;
 
-use sqlx::PgPool;
+pub type Database = sqlx::PgPool;
 
-// TODO: fix queries (schema changed)
-// TODO: write tests for all queries (?) - even the simple ones
+/// Connect to the database via a URI.
+#[inline]
+pub async fn connect(uri: &str) -> sqlx::Result<Database> {
+  Database::connect(uri).await
+}
 
-/// Connect to the database.
-pub async fn connect(host: &str, port: &str, name: &str, user: &str, password: &str) -> sqlx::Result<PgPool> {
-  PgPool::connect(&format!(
+/// Connect to the database with individual parameters.
+#[inline]
+pub async fn connect_with(host: &str, port: &str, name: &str, user: &str, password: &str) -> sqlx::Result<Database> {
+  connect(&format!(
     "postgres://{host}:{port}/{name}?user={user}&password={password}"
   ))
   .await
@@ -24,11 +28,33 @@ pub async fn connect(host: &str, port: &str, name: &str, user: &str, password: &
 /// - `DB_PASSWORD`
 ///
 /// Panics if any of them are unavailable.
-pub async fn connect_from_env() -> sqlx::Result<PgPool> {
+#[inline]
+pub async fn connect_from_env() -> sqlx::Result<Database> {
   let host = std::env::var("DB_HOST").expect("Missing environment variable `DB_HOST`");
   let port = std::env::var("DB_PORT").expect("Missing environment variable `DB_PORT`");
   let name = std::env::var("DB_NAME").expect("Missing environment variable `DB_NAME`");
   let user = std::env::var("DB_USER").expect("Missing environment variable `DB_USER`");
   let password = std::env::var("DB_PASSWORD").expect("Missing environment variable `DB_PASSWORD`");
-  connect(&host, &port, &name, &user, &password).await
+  connect_with(&host, &port, &name, &user, &password).await
+}
+
+#[cfg(test)]
+mod tests {
+  // TODO: connect to db without name, start a new logical db per test
+  #[macro_export]
+  macro_rules! db_test {
+    ($name:ident, $tx:ident $body:block) => {
+      #[actix_rt::test]
+      #[cfg_attr(not(feature = "test-database"), ignore)]
+      async fn $name() -> anyhow::Result<()> {
+        let conn = db::connect_from_env().await?;
+        let mut $tx = conn.begin().await?;
+
+        $body
+
+        $tx.rollback().await?;
+        Ok(())
+      }
+    }
+  }
 }

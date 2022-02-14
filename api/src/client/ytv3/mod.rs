@@ -1,23 +1,27 @@
 mod schema;
 
-use crate::common::util::query_ext::QueryExt;
+use crate::{
+  common::{platform::Platform, util::query_ext::QueryExt},
+  db::songs::SongData,
+};
 use chrono::{DateTime, Utc};
 use secrecy::{ExposeSecret, Secret};
 use std::sync::Arc;
 
-pub struct Client {
+#[derive(Clone)]
+pub struct YoutubeApiV3 {
   inner: reqwest::Client,
   base_url: String,
   api_key: Secret<String>,
 }
 
-impl Client {
-  pub fn new(base_url: impl Into<String>, api_key: Secret<String>) -> Arc<Client> {
-    Arc::new(Self {
+impl YoutubeApiV3 {
+  pub fn new(base_url: impl Into<String>, api_key: Secret<String>) -> YoutubeApiV3 {
+    Self {
       inner: reqwest::Client::new(),
       base_url: base_url.into(),
       api_key,
-    })
+    }
   }
 }
 
@@ -29,8 +33,43 @@ pub struct Video {
   pub published_at: DateTime<Utc>,
 }
 
-impl Client {
-  pub async fn playlist_videos(self: Arc<Self>, playlist_id: &str) -> reqwest::Result<Vec<Video>> {
+impl From<Video> for SongData {
+  fn from(v: Video) -> Self {
+    Self::new(v.published_at, v.id, Platform::Youtube, v.title)
+  }
+}
+
+impl From<schema::VideoListItem> for Video {
+  fn from(v: schema::VideoListItem) -> Self {
+    Self {
+      id: v.id,
+      title: v.snippet.title,
+      channel_id: v.snippet.channel_id,
+      published_at: v.snippet.published_at,
+    }
+  }
+}
+
+impl YoutubeApiV3 {
+  pub async fn videos(&self, ids: impl IntoIterator<Item = &str>) -> reqwest::Result<Vec<Video>> {
+    Ok(
+      self
+        .inner
+        .get(format!("{}/videos", self.base_url))
+        .query(&[("key", self.api_key.expose_secret().as_str()), ("part", "snippet")])
+        .query_iter("id", ids.into_iter())
+        .send()
+        .await?
+        .json::<schema::VideoList>()
+        .await?
+        .items
+        .into_iter()
+        .map(Video::from)
+        .collect(),
+    )
+  }
+
+  pub async fn playlist_videos(&self, playlist_id: &str) -> reqwest::Result<Vec<Video>> {
     let mut result = vec![];
     let mut page_token = Option::<String>::None;
     loop {
@@ -51,28 +90,16 @@ impl Client {
         .await?;
       // 2. fetch videos
       let videos = self
-        .inner
-        .get(format!("{}/videos", self.base_url))
-        .query(&[("key", self.api_key.expose_secret().as_str()), ("part", "snippet")])
-        .query_iter(
-          "id",
+        .videos(
           playlist_items
             .items
             .iter()
             .filter(|item| item.status.privacy_status != schema::PrivacyStatus::Unspecified)
-            .map(|v| &v.content_details.video_id),
+            .map(|v| v.content_details.video_id.as_str()),
         )
-        .send()
-        .await?
-        .json::<schema::VideoList>()
         .await?;
       // 3. store videos
-      result.extend(videos.items.into_iter().map(|video| Video {
-        id: video.id,
-        title: video.snippet.title,
-        channel_id: video.snippet.channel_id,
-        published_at: video.snippet.published_at,
-      }));
+      result.extend_from_slice(&videos[..]);
       // 4. paginate playlist items
       if let Some(next_page_token) = playlist_items.next_page_token {
         page_token = Some(next_page_token);
@@ -145,7 +172,7 @@ mod tests {
       .mount(&mock)
       .await;
 
-    let client = Client::new(mock.uri(), Secret::new("test".into()));
+    let client = YoutubeApiV3::new(mock.uri(), Secret::new("test".into()));
     assert_eq!(client.playlist_videos("test").await?.len(), 25);
 
     Ok(())
@@ -189,7 +216,7 @@ mod tests {
       .mount(&mock)
       .await;
 
-    let client = Client::new(mock.uri(), Secret::new("test".into()));
+    let client = YoutubeApiV3::new(mock.uri(), Secret::new("test".into()));
     assert_eq!(client.playlist_videos("test").await?.len(), 25);
 
     Ok(())
@@ -231,7 +258,7 @@ mod tests {
       .mount(&mock)
       .await;
 
-    let client = Client::new(mock.uri(), Secret::new("test".into()));
+    let client = YoutubeApiV3::new(mock.uri(), Secret::new("test".into()));
     let response = client.playlist_videos("test").await?;
     assert_eq!(response.len(), 50);
 

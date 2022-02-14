@@ -1,40 +1,48 @@
 use chrono::{DateTime, Utc};
 
-#[derive(Debug, Clone, getset::Getters, sqlx::FromRow)]
+use crate::common::platform::Platform;
+
+#[derive(Debug, Clone, serde::Serialize, getset::Getters, sqlx::FromRow)]
 #[getset(get = "pub")]
 pub struct Song {
+  #[serde(skip)]
   #[sqlx(rename = "song_id")]
   id: i32,
+  #[serde(skip)]
   added_at: DateTime<Utc>,
+  #[serde(skip)]
   published_at: DateTime<Utc>,
-  platform: String,
+  #[serde(skip)]
+  platform: Platform,
+  #[serde(rename = "id")]
   #[sqlx(rename = "platform_song_id")]
   song_id: String,
   title: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, getset::Getters)]
+#[getset(get = "pub")]
 pub struct SongData {
-  pub published_at: DateTime<Utc>,
-  pub platform: String,
-  pub song_id: String,
-  pub title: String,
+  published_at: DateTime<Utc>,
+  platform: Platform,
+  song_id: String,
+  title: String,
 }
 
 pub struct SongDataSoa {
   pub published_at: Vec<DateTime<Utc>>,
   pub song_id: Vec<String>,
-  pub platform: Vec<String>,
+  pub platform: Vec<&'static str>,
   pub title: Vec<String>,
 }
 
 impl SongData {
-  pub fn new(platform: String, song_id: String, title: String, published_at: DateTime<Utc>) -> Self {
+  pub fn new(published_at: DateTime<Utc>, song_id: String, platform: Platform, title: String) -> Self {
     Self {
       published_at,
       song_id,
       platform,
-      title,
+      title: title.to_lowercase(),
     }
   }
 
@@ -46,7 +54,7 @@ impl SongData {
     for item in data.into_iter() {
       published_at.push(item.published_at);
       song_id.push(item.song_id);
-      platform.push(item.platform);
+      platform.push(item.platform.as_str());
       title.push(item.title);
     }
     SongDataSoa {
@@ -124,7 +132,22 @@ where
   .await
 }
 
-pub async fn find<'db, E>(db: E, title: String) -> sqlx::Result<Song>
+pub async fn exists<'db, E>(db: E, platform: Platform, id: String) -> sqlx::Result<bool>
+where
+  E: sqlx::PgExecutor<'db> + 'db,
+{
+  sqlx::query_scalar(
+    r#"
+      SELECT EXISTS(SELECT 1 FROM songs WHERE (platform, platform_song_id) = ($1, $2))
+    "#,
+  )
+  .bind(&platform)
+  .bind(&id)
+  .fetch_one(db)
+  .await
+}
+
+pub async fn search_by_title<'db, E>(db: E, title: String) -> sqlx::Result<Song>
 where
   E: sqlx::PgExecutor<'db> + 'db,
 {
@@ -137,9 +160,4 @@ where
   .bind(&title)
   .fetch_one(db)
   .await
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
 }

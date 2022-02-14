@@ -1,31 +1,14 @@
-use serde::{Deserialize, Deserializer};
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, sqlx::Type)]
+#[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
+pub enum Platform {
+  Youtube,
+}
 
-fn inner<'de, D>(v: &'de str) -> Result<String, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  Ok(
-    match v {
-      "youtube" => v,
-      _ => return Err(serde::de::Error::custom("valid values are: youtube")),
+impl Platform {
+  pub fn as_str(self) -> &'static str {
+    match self {
+      Platform::Youtube => "youtube",
     }
-    .to_string(),
-  )
-}
-
-pub fn known<'de, D>(d: D) -> Result<String, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  inner::<'de, D>(<&'de str as Deserialize>::deserialize(d)?)
-}
-
-pub fn known_opt<'de, D>(d: D) -> Result<Option<String>, D::Error>
-where
-  D: Deserializer<'de>,
-{
-  match Option::<&'de str>::deserialize(d)? {
-    Some(v) => inner::<'de, D>(v).map(Some),
-    None => Ok(None),
   }
 }

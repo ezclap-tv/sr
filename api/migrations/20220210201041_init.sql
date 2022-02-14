@@ -6,7 +6,7 @@ CREATE TABLE songs (
   published_at    	TIMESTAMPTZ NOT NULL,
   platform          TEXT NOT NULL,
   platform_song_id  TEXT NOT NULL,
-  title             TEXT NOT NULL,
+  title             TEXT NOT NULL, -- should always be lowercase to avoid ILIKE
   UNIQUE (platform, platform_song_id)
 );
 

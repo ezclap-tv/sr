@@ -1,10 +1,13 @@
-use crate::common::platform;
-use actix_web::{self as web, web::Query, HttpResponse};
+use crate::{
+  common::platform::Platform,
+  db::{self, Database},
+  error::FailWith,
+};
+use actix_web::{get, web, web::Query, HttpResponse, Result};
 
 #[derive(serde::Deserialize, Debug)]
 pub struct RandomRequest {
-  #[serde(deserialize_with = "platform::known_opt")]
-  pub platform: Option<String>,
+  pub platform: Option<Platform>,
   pub channel: Option<String>,
   #[serde(default = "default_count")]
   pub count: u64,
@@ -14,8 +17,9 @@ fn default_count() -> u64 {
   1
 }
 
-#[web::get("/random")]
-pub async fn get(Query(query): Query<RandomRequest>) -> HttpResponse {
+#[get("/random")]
+pub async fn get(db: web::Data<Database>, Query(query): Query<RandomRequest>) -> Result<HttpResponse> {
   log::info!("{query:#?}");
-  HttpResponse::Ok().finish()
+  // fetch and return a random song id
+  Ok(HttpResponse::Ok().json(db::songs::random(db.get_ref()).await.internal()?))
 }

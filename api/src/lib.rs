@@ -1,10 +1,13 @@
 pub mod client;
 pub mod common;
+#[macro_use]
 pub mod db;
+pub mod error;
 pub mod v1;
 
 use actix_cors::Cors;
-use actix_web::{self as web, dev::Server, http::header, middleware, App, HttpResponse, HttpServer};
+use actix_web::{self as web, dev::Server, http::header, middleware, web::Data, App, HttpResponse, HttpServer};
+use common::config::Config;
 use std::net::TcpListener;
 
 #[web::get("/health")]
@@ -12,10 +15,15 @@ async fn health() -> HttpResponse {
   HttpResponse::Ok().finish()
 }
 
-pub fn run(socket: TcpListener) -> std::io::Result<Server> {
+pub async fn start(socket: TcpListener, config: Config) -> anyhow::Result<Server> {
+  let db = db::connect(&config.database_url).await?;
+  let yt = client::Youtube::new("https://www.googleapis.com/youtube/v3", config.youtube_key.clone());
   Ok(
     HttpServer::new(move || {
       App::new()
+        .app_data(Data::new(db.clone()))
+        .app_data(Data::new(yt.clone()))
+        .app_data(Data::new(config.clone()))
         .wrap(
           Cors::default()
             .allow_any_origin()

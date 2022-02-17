@@ -16,12 +16,13 @@ interface PlayerEvents {
   rate: number;
   error: YT.PlayerError;
   apichanged: void;
+
+  videoEnd: void;
 }
 
 export class Player extends EventEmitter<PlayerEvents> {
   playlist: string[];
   instance!: YT.Player;
-
   private _loaded: boolean = false;
 
   constructor(parent: HTMLElement = document.body) {
@@ -46,16 +47,10 @@ export class Player extends EventEmitter<PlayerEvents> {
           onReady: ({ target }) => {
             if (this._loaded) return;
             target.addEventListener<YT.OnStateChangeEvent>("onStateChange", ({ target, data }) => {
-              if (data == null) {
-                // video stopped working due to buffering failing
-                // or something along those lines, just restart it 4Head
-                const id = new URL(target.getVideoUrl()).searchParams.get("v");
-                if (id) {
-                  console.log("reloading", id);
-                  target.loadVideoById(id);
-                }
-              } else {
-                this.emit("state", data);
+              this.emit("state", data);
+              const info = (target as any).playerInfo;
+              if (data === YT.PlayerState.ENDED || (data == null && info.duration - info.currentTime < 0.5)) {
+                this.emit("videoEnd");
               }
             });
             target.addEventListener<YT.OnPlaybackQualityChangeEvent>("onPlaybackQualityChange", ({ data }) =>
@@ -91,18 +86,26 @@ export class Player extends EventEmitter<PlayerEvents> {
     node.appendChild(this.instance.getIframe());
   }
 
-  load(id: string) {
-    if (!this.loaded()) return;
-    this.instance.loadVideoById(id);
+  playing() {
+    return [/* buffering */ 3, /* paused */ 2, /* playing */ 1].includes(this.instance.getPlayerState());
   }
 
-  play() {
+  play(id?: string) {
     if (!this.loaded()) return;
-    this.instance.playVideo();
+    if (id) {
+      this.instance.loadVideoById(id);
+    } else {
+      this.instance.playVideo();
+    }
   }
 
   pause() {
     if (!this.loaded()) return;
     this.instance.pauseVideo();
+  }
+
+  stop() {
+    if (!this.loaded()) return;
+    this.instance.stopVideo();
   }
 }

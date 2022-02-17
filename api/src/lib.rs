@@ -16,6 +16,7 @@ async fn health() -> HttpResponse {
 }
 
 pub async fn start(socket: TcpListener, config: Config) -> anyhow::Result<Server> {
+  // TODO: authentication
   let db = db::connect(&config.database_url).await?;
   let yt = client::Youtube::new("https://www.googleapis.com/youtube/v3", config.youtube_key.clone());
   Ok(

@@ -47,14 +47,16 @@ pub async fn get(
   // update and persist can probably be the same (just INSERT INTO ... ON CONFLICT DO NOTHING), but `update` also has to modify `updated_at`
   // if should update: fetch + update playlist
   // if does not exist: fetch + persist playlist
-  if should_fetch(
-    db.get_ref(),
-    query.platform,
-    &query.id,
-    config.playlist_refresh_interval,
-  )
-  .await?
+  if query.force
+    || should_fetch(
+      db.get_ref(),
+      query.platform,
+      &query.id,
+      config.playlist_refresh_interval,
+    )
+    .await?
   {
+    // TODO: if this fails because of rate limiting, don't exit
     let data = match query.platform {
       Platform::Youtube => PlaylistData::new(
         Platform::Youtube,

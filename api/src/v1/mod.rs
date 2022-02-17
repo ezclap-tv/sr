@@ -10,5 +10,5 @@ pub fn routes() -> Scope {
     .service(memo::post)
     .service(playlist::get)
     .service(random::get)
-    .service(search::get)
+  //.service(search::get)
 }

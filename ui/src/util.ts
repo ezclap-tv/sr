@@ -67,3 +67,20 @@ export class EventEmitter<
     callbacks[event]?.delete(callback);
   }
 }
+
+declare global {
+  interface Array<T> {
+    remove(predicate: (item: T, index: number, array: T[]) => boolean): Array<T>;
+  }
+}
+
+Array.prototype.remove = function <T>(predicate: (item: T, index: number, array: T[]) => boolean): T[] {
+  let removed = [];
+  for (let i = 0, len = this.length; i < len; ++i) {
+    const item = this[i];
+    if (predicate(item, i, this)) removed.push(item);
+    else this[i - removed.length] = item;
+  }
+  this.length -= removed.length;
+  return removed;
+};

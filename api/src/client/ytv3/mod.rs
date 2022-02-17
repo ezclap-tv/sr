@@ -1,3 +1,5 @@
+// TODO: use https://github.com/causal-agent/scraper instead of calling the API
+
 mod schema;
 
 use crate::{
@@ -6,7 +8,6 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use secrecy::{ExposeSecret, Secret};
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct YoutubeApiV3 {
@@ -51,6 +52,8 @@ impl From<schema::VideoListItem> for Video {
 }
 
 impl YoutubeApiV3 {
+  // TODO: fetch video length -> allow skipping videos longer than some configurable value
+  // TODO: fetch contentDetails.ytRating -> allow skipping or automatically hiding age-restricted videos
   pub async fn videos(&self, ids: impl IntoIterator<Item = &str>) -> reqwest::Result<Vec<Video>> {
     Ok(
       self
@@ -88,6 +91,7 @@ impl YoutubeApiV3 {
         .await?
         .json::<schema::PlaylistItemList>()
         .await?;
+      println!("{:#?}", playlist_items.items);
       // 2. fetch videos
       let videos = self
         .videos(

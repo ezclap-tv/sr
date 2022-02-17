@@ -1,4 +1,4 @@
-use super::songs::*;
+use super::{songs::*, Database};
 use crate::common::platform::Platform;
 use chrono::{DateTime, Utc};
 
@@ -30,10 +30,7 @@ impl PlaylistData {
   }
 }
 
-pub async fn get<'db, E>(db: E, platform: Platform, id: &str) -> sqlx::Result<Option<Playlist>>
-where
-  E: sqlx::PgExecutor<'db> + 'db,
-{
+pub async fn get(db: &Database, platform: Platform, id: &str) -> sqlx::Result<Option<Playlist>> {
   sqlx::query_as(r#"SELECT * FROM playlists WHERE (platform, platform_playlist_id) = ($1, $2)"#)
     .bind(platform.as_str())
     .bind(id)
@@ -45,38 +42,48 @@ where
 ///
 /// - Creates a `playlists` table entry, or sets its `updated_at = now()` on conflict
 /// - Inserts new songs from `PlaylistData.songs`
+/// - Deletes all `playlists_songs` entries with `playlist_id = playlist.id`
 /// - Creates `playlists_songs` entries, joining `playlist.id` with every `id` in new songs
 ///
-pub async fn upsert<'db, E>(db: E, playlist: PlaylistData) -> sqlx::Result<()>
-where
-  E: sqlx::PgExecutor<'db> + 'db,
-{
-  let songs = SongData::soa(playlist.songs);
+pub async fn upsert(db: &Database, playlist: PlaylistData) -> sqlx::Result<()> {
+  let mut tx = db.begin().await?;
 
-  // $1 = playlist.platform
-  // $2 = playlist.platform_playlist_id
-  // $3 = songs.published_at
-  // $4 = songs.platform
-  // $5 = songs.platform_song_id
-  // $6 = songs.title
+  let playlist_id: i32 = sqlx::query_scalar(
+    r#"
+      INSERT INTO playlists (updated_at, platform, platform_playlist_id)
+      VALUES (now()::timestamptz, $1::text, $2::text)
+      ON CONFLICT (platform, platform_playlist_id) DO UPDATE SET updated_at = now()
+      RETURNING playlist_id
+    "#,
+  )
+  .bind(playlist.platform.as_str())
+  .bind(&playlist.playlist_id)
+  .fetch_one(&mut tx)
+  .await?;
+
+  sqlx::query(
+    r#"
+      DELETE FROM playlists_songs
+      WHERE playlist_id = $1
+    "#,
+  )
+  .bind(playlist_id)
+  .execute(&mut tx)
+  .await?;
+
+  let songs = SongData::soa(playlist.songs);
+  // TODO: order by song position when inserting
   sqlx::query(
     r#"
       WITH
-      -- insert playlist, get its id
-      new_playlist AS (
-        INSERT INTO playlists (updated_at, platform, platform_playlist_id)
-        VALUES (now()::timestamptz, $1::text, $2::text)
-        ON CONFLICT (platform, platform_playlist_id) DO UPDATE SET updated_at = now()
-        RETURNING playlist_id
-      ),
       -- either select or insert every song, getting all ids
       selected_songs AS (
         SELECT song_id FROM songs
-        WHERE (platform, platform_song_id) IN (SELECT * FROM UNNEST($4::text[], $5::text[]))
+        WHERE (platform, platform_song_id) IN (SELECT * FROM UNNEST($3::text[], $4::text[]))
       ),
       inserted_songs as (
         INSERT INTO songs (published_at, platform, platform_song_id, title)
-        SELECT * FROM UNNEST($3::timestamptz[], $4::text[], $5::text[], $6::text[])
+        SELECT * FROM UNNEST($2::timestamptz[], $3::text[], $4::text[], $5::text[])
         ON CONFLICT DO NOTHING
         RETURNING song_id
       ),
@@ -85,31 +92,28 @@ where
         SELECT * FROM selected_songs
         UNION
         SELECT * FROM inserted_songs
+        ORDER BY song_id
       )
       -- insert into playlists<->songs table
-      -- by joining new playlist id with every id from inserted+selected songs
       INSERT INTO playlists_songs (playlist_id, song_id)
-      SELECT * FROM new_playlist
-      JOIN song_ids ON true
+      SELECT $1 AS playlist_id, song_id FROM song_ids
       ON CONFLICT DO NOTHING
     "#,
   )
-  .bind(playlist.platform.as_str())
-  .bind(&playlist.playlist_id)
+  .bind(&playlist_id)
   .bind(&songs.published_at)
   .bind(&songs.platform)
   .bind(&songs.song_id)
   .bind(&songs.title)
-  .execute(db)
+  .execute(&mut tx)
   .await?;
+
+  tx.commit().await?;
   Ok(())
 }
 
 // get playlist items (keyset pagination)
-pub async fn get_page<'db, E>(db: E, playlist_id: &str, offset: i32, limit: i32) -> sqlx::Result<Vec<Song>>
-where
-  E: sqlx::PgExecutor<'db> + 'db,
-{
+pub async fn get_page(db: &Database, playlist_id: &str, offset: i32, limit: i32) -> sqlx::Result<Vec<Song>> {
   sqlx::query_as(
     r#"
       WITH song_ids AS (
@@ -132,7 +136,8 @@ where
   .await
 }
 
-#[cfg(test)]
+// TODO: start a new logical database for every test run to allow for using transactions in queries
+/* #[cfg(test)]
 mod tests {
   use super::*;
   use crate::{common::platform::Platform, db};
@@ -275,4 +280,4 @@ mod tests {
     assert_eq!(get_page(&mut tx, "test", 50, 50).await?.len(), 50);
     assert_eq!(get_page(&mut tx, "test", 100, 50).await?.len(), 0);
   });
-}
+} */
